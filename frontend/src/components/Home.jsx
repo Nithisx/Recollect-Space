@@ -4,6 +4,9 @@ import { Header } from './Header';
 export const Home = () => {
   return (
     <>
-    </>)
+      <Header/>
+    </>
+    
+)
 }
 export default Home;

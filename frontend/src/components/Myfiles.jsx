@@ -1,25 +1,100 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom'; 
 import Header from './Header';
-import folder from '../assets/folder.png';
+import folderIcon from '../assets/folder.png'; 
 
 export const Myfiles = () => {
   const [folders, setFolders] = useState({ memory: [], documents: [], other: [] });
+  const [user, setUser] = useState(null);
+  const navigate = useNavigate();    
 
-  const addFolder = (section) => {
+  useEffect(() => {
+    const loggedInUser = JSON.parse(localStorage.getItem('user'));
+    if (loggedInUser) {
+      setUser(loggedInUser);
+      fetchFolders(loggedInUser._id);
+    }
+  }, []);
+
+  // Fetch folders from the backend, now storing both the folder ID and name
+  const fetchFolders = async (userId) => {
+    try {
+      const token = localStorage.getItem('authToken');
+      if (!token) {
+        throw new Error('No token found');
+      }
+      console.log('userId:', userId);
+
+
+      const response = await axios.get(`http://localhost:5003/api/folders/user/${userId}`, {  // Correct URL
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      
+
+      const fetchedFolders = response.data.folders;
+      const organizedFolders = { memory: [], documents: [], other: [] };
+
+      fetchedFolders.forEach((folder) => {
+        organizedFolders[folder.section].push({ id: folder._id, name: folder.name }); // Storing folder ID along with name
+      });
+
+      setFolders(organizedFolders);
+    } catch (error) {
+      console.error('Error fetching folders:', error.response ? error.response.data : error.message);
+    }
+
+  };
+
+  // Create a folder and save it to the database
+  const addFolder = async (section) => {
     const folderName = prompt('Enter folder name:');
-    if (folderName) {
-      setFolders((prevState) => ({
-        ...prevState,
-        [section]: [...prevState[section], folderName],
-      }));
+    if (folderName && user) {
+      try {
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+          throw new Error('No token found');
+        }
+
+        const config = {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        };
+
+        const response = await axios.post(
+          'http://localhost:5003/api/folders/create-folder',
+          {
+            name: folderName,
+            section: section,
+            userId: user._id,
+          },
+          config
+        );
+
+        // Update folder state after successful creation
+        setFolders((prevState) => ({
+          ...prevState,
+          [section]: [...prevState[section], { id: response.data.folder._id, name: folderName }],
+        }));
+      } catch (error) {
+        console.error('Error creating folder:', error.response ? error.response.data : error.message);
+      }
     }
   };
 
+  // Render folders dynamically and navigate to specific folder on click
   const renderFolders = (section) => {
-    return folders[section].map((folderName, index) => (
-      <div key={index} className="flex flex-col items-center gap-1">
-        <img src={folder} alt="Folder" className="w-20 h-20" /> 
-        <p className="text-sm">{folderName}</p>
+    return folders[section].map((folder, index) => (
+      <div
+        key={index}
+        className="flex flex-col items-center gap-1 cursor-pointer"
+        onClick={() => navigate(`/folder/${folder.id}`)} // Navigate to the folder page by folder ID
+      >
+        <img src={folderIcon} alt="Folder" className="w-20 h-20" />
+        <p className="text-sm">{folder.name}</p>
       </div>
     ));
   };
@@ -51,7 +126,7 @@ export const Myfiles = () => {
                 </button>
               </div>
               <div className="overflow-x-auto">
-                <div className="flex gap-2">{renderFolders('memory')}</div> {/* Horizontal scrolling and reduced gap */}
+                <div className="flex gap-2">{renderFolders('memory')}</div>
               </div>
             </div>
 
@@ -67,7 +142,7 @@ export const Myfiles = () => {
                 </button>
               </div>
               <div className="overflow-x-auto">
-                <div className="flex gap-2">{renderFolders('documents')}</div> {/* Horizontal scrolling and reduced gap */}
+                <div className="flex gap-2">{renderFolders('documents')}</div>
               </div>
             </div>
 
@@ -83,7 +158,7 @@ export const Myfiles = () => {
                 </button>
               </div>
               <div className="overflow-x-auto">
-                <div className="flex gap-2">{renderFolders('other')}</div> {/* Horizontal scrolling and reduced gap */}
+                <div className="flex gap-2">{renderFolders('other')}</div>
               </div>
             </div>
           </div>

@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider, signInWithRedirect, FacebookAuthProvider} from "firebase/auth";
-import { app } from '../../../backend/firebase';
+import axios from 'axios'; // Import Axios for API requests
 import '@fortawesome/fontawesome-free/css/all.min.css';
-import Header from './Header'
+import Header from './Header';
 import { useNavigate } from 'react-router-dom';
 
 const Login = () => {
@@ -12,11 +11,7 @@ const Login = () => {
     const [errorMessage, setErrorMessage] = useState('');
     const [user, setUser] = useState(null);
 
-
     const navigate = useNavigate();
-    const auth = getAuth(app);
-    const provider = new GoogleAuthProvider();
-
 
     useEffect(() => {
         const storedUser = localStorage.getItem('user');
@@ -39,114 +34,74 @@ const Login = () => {
         setErrorMessage('');
     };
 
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setErrorMessage('');
-
-
-
+      
         if (!email || !password) {
-            setErrorMessage('Please fill in both fields.');
-            return;
+          setErrorMessage('Please fill in both fields.');
+          return;
         }
-
-        if (isLoginVisible) {
-            signInWithEmailAndPassword(auth, email, password)
-                .then((userCredential) => {
-                    const loggedInUser = userCredential.user;
-                    localStorage.setItem('user', JSON.stringify(loggedInUser));
-                    setUser(loggedInUser);
-                    alert("Login successful");
-                    navigate('/')
-
-                })
-                .catch((error) => {
-                    setErrorMessage(error.message);
-                });
-        } else {
-            createUserWithEmailAndPassword(auth, email, password)
-                .then((userCredential) => {
-                    const signedUpUser = userCredential.user;
-                    localStorage.setItem('user', JSON.stringify(signedUpUser));
-                    setUser(signedUpUser);
-                    alert("Signup successful");
-                    navigate('/')
-                })
-                .catch((error) => {
-                    setErrorMessage(error.message);
-                });
+      
+        try {
+          if (isLoginVisible) {
+            // Login API call
+            const response = await axios.post('http://localhost:5003/api/auth/login', { email, password });
+            const loggedInUser = response.data.user;
+            const token = response.data.token; // Get the token from response
+      
+            localStorage.setItem('authToken', token); // Store token correctly
+            localStorage.setItem('user', JSON.stringify(loggedInUser));
+            setUser(loggedInUser);
+      
+            alert('Login successful');
+            navigate('/');
+          } else {
+            // Signup API call
+            const response = await axios.post('http://localhost:5003/api/auth/register', { email, password });
+            const signedUpUser = response.data.user;
+            const token = response.data.token; // Get the token from response
+      
+            localStorage.setItem('authToken', token); // Store token correctly
+            localStorage.setItem('user', JSON.stringify(signedUpUser));
+            setUser(signedUpUser);
+      
+            alert('Signup successful');
+            navigate('/');
+          }
+        } catch (error) {
+          setErrorMessage(error.response.data.message || 'An error occurred');
         }
-
+      
         setEmail('');
         setPassword('');
-    };
+      };
+      
 
     const handleLogout = () => {
-        // Clear localStorage and log out user
         localStorage.removeItem('user');
         setUser(null);
         alert("Logged out successfully");
     };
 
-    // if (user) {
-    //     return (
-    //         <>
-    //             <Header />
-    //             <div className="flex items-center justify-center min-h-screen bg-gray-100">
-    //                 <div className="bg-white p-8 rounded-lg shadow-md text-center">
-    //                     <h2 className="text-xl font-medium">Welcome, {user.email}!</h2>
-    //                     <button
-    //                         onClick={handleLogout}
-    //                         className="bg-red-600 text-white px-4 py-2 rounded shadow hover:bg-red-700 transition mt-4"
-    //                     >
-    //                         Logout
-    //                     </button>
-    //                 </div>
-    //             </div>
-    //         </>
-    //     );
-    // }
-
-
-    const logininwithgoogle = () => {
-        signInWithPopup(auth, provider)
-            .then((result) => {
-                const credential = GoogleAuthProvider.credentialFromResult(result);
-                const token = credential.accessToken;
-                const user = result.user;
-                localStorage.setItem('user', JSON.stringify(user));
-                navigate('/')
-            }).catch((error) => {
-                const errorCode = error.code;
-                const errorMessage = error.message;
-                const email = error.customData.email;
-                const credential = GoogleAuthProvider.credentialFromError(error);
-            });
-
+    if (user) {
+        return (
+            <>
+                <Header />
+                <div className="flex items-center justify-center min-h-screen bg-gray-100">
+                    <div className="bg-white p-8 rounded-lg shadow-md text-center">
+                        <h2 className="text-xl font-medium">Welcome, {user.email}!</h2>
+                        <button
+                            onClick={handleLogout}
+                            className="bg-red-600 text-white px-4 py-2 rounded shadow hover:bg-red-700 transition mt-4"
+                        >
+                            Logout
+                        </button>
+                    </div>
+                </div>
+            </>
+        );
     }
-
-    const sigininwithgoogle = () => {
-        signInWithRedirect(auth, provider);
-        navigate('/')
-    }
-
-    const logininwithfacebook = () => {
-        signInWithPopup(auth, provider)
-            .then((result) => {
-                const user = result.user;
-                const credential = FacebookAuthProvider.credentialFromResult(result);
-                const accessToken = credential.accessToken;
-                localStorage.setItem('user', JSON.stringify(user));
-
-            })
-            .catch((error) => {
-                const errorCode = error.code;
-                const errorMessage = error.message;
-                const email = error.customData.email;
-                const credential = FacebookAuthProvider.credentialFromError(error);
-            });
-    }
-
 
     return (
         <>
@@ -185,14 +140,6 @@ const Login = () => {
                                 </button>
                             </div>
                         </form>
-                        <div className="mt-4 flex items-center justify-center gap-2">
-                            <button className="w-10 h-10 flex items-center justify-center rounded-full border border-gray-300" onClick={logininwithfacebook}>
-                                <i className="fab fa-facebook-f text-blue-600"></i>
-                            </button>
-                            <button className="w-10 h-10 flex items-center justify-center rounded-full border border-gray-300" onClick={logininwithgoogle}>
-                                <i className="fab fa-google text-red-500"></i>
-                            </button>
-                        </div>
                         <p className="text-center text-sm mt-4">
                             Don't have an account yet?{' '}
                             <span className="text-blue-500 cursor-pointer" onClick={showSignup}>
@@ -233,14 +180,6 @@ const Login = () => {
                                 </button>
                             </div>
                         </form>
-                        <div className="mt-4 flex items-center justify-center gap-2">
-                            <button className="w-10 h-10 flex items-center justify-center rounded-full border border-gray-300" onClick={logininwithfacebook}>
-                                <i className="fab fa-facebook-f text-blue-600"></i>
-                            </button>
-                            <button className="w-10 h-10 flex items-center justify-center rounded-full border border-gray-300" onClick={sigininwithgoogle}>
-                                <i className="fab fa-google text-red-500"></i>
-                            </button>
-                        </div>
                         <p className="text-center text-sm mt-4">
                             Already have an account?{' '}
                             <span className="text-blue-500 cursor-pointer" onClick={showLogin}>
