@@ -5,7 +5,7 @@ const connectDB = require('./config/db'); // Function to connect to your MongoDB
 const authRoutes = require('./routes/authRoutes'); // Routes for authentication
 const folderRoutes = require('./routes/folderRoutes'); // Updated to match casing
 const path = require('path');
-
+const blogRoutes =require("./routes/Blogroutes")
 
 dotenv.config();
 connectDB(); // Connect to the database
@@ -19,6 +19,8 @@ app.use(express.json()); // Middleware for parsing JSON bodies
 app.use('/api/auth', authRoutes); // Authentication routes
 app.use('/api/folders', folderRoutes); // Folder routes
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/api', blogRoutes);
+
 
 
 const PORT = process.env.PORT || 5003; 

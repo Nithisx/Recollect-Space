@@ -1,9 +1,8 @@
-
-
-// export default FolderPage;
 import React, { useEffect, useState } from 'react';
 import axios from 'axios';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
+import Header from "./Header"
+
 
 const FolderPage = () => {
     const { folderId } = useParams();
@@ -11,6 +10,7 @@ const FolderPage = () => {
     const [photos, setPhotos] = useState([]);
     const [file, setFile] = useState(null);
     const [errorMessage, setErrorMessage] = useState('');
+    const navigate = useNavigate(); // Hook for navigation
 
     useEffect(() => {
         const fetchFolder = async () => {
@@ -19,14 +19,13 @@ const FolderPage = () => {
                 if (!token) {
                     throw new Error('No token found');
                 }
-    
-                // Ensure you use folderId to fetch the folder
+
                 const response = await axios.get(`http://localhost:5003/api/folders/${folderId}`, {
                     headers: {
                         Authorization: `Bearer ${token}`,
                     },
                 });
-    
+
                 const folderData = response.data.folder;
                 setFolder(folderData || {});
                 setPhotos(folderData?.photos || []);
@@ -35,10 +34,9 @@ const FolderPage = () => {
                 setErrorMessage('Could not fetch folder details.');
             }
         };
-    
+
         fetchFolder();
     }, [folderId]);
-    
 
     const handleFileChange = (e) => {
         setFile(e.target.files[0]);
@@ -83,39 +81,74 @@ const FolderPage = () => {
         }
     };
 
+    const handleAddBlockClick = () => {
+        navigate(`/folders/${folderId}/blog`); // Navigate to the blog page
+    };
+
     if (errorMessage) {
-        return <p className="text-red-500">{errorMessage}</p>;
+        return <p className="text-red-500 text-center">{errorMessage}</p>;
     }
 
     if (!folder) {
-        return <p>Loading folder...</p>;
+        return <p className="text-gray-700 text-center">Loading folder...</p>;
     }
 
     return (
-        <div className="p-4">
-            <h1 className="text-2xl font-bold">{folder.name || 'Untitled Folder'}</h1>
-            <h2 className="text-xl">Photos</h2>
-            <ul>
+        <>
+        <Header/>
+        <div className="container mx-auto p-4">
+            <div className="flex justify-between items-center mb-6">
+                <h1 className="text-3xl font-bold text-gray-800">{folder.name || 'Untitled Folder'}</h1>
+                <button 
+                    onClick={handleAddBlockClick} 
+                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded shadow-md">
+                    Add Block
+                </button>
+            </div>
+
+            <h2 className="text-xl font-semibold mb-4 text-gray-700">Photos</h2>
+
+            <ul className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
                 {photos.length > 0 ? (
                     photos.map((photo) => (
                         <li key={photo._id} className="mb-4">
-                            <img 
-                                src={`data:${photo.contentType};base64,${photo.data}`} 
-                                alt="Uploaded" 
-                                width="200" 
+                            <img
+                                className="w-full h-48 object-cover rounded-lg shadow-md"
+                                src={`data:${photo.contentType};base64,${photo.data}`}
+                                alt="Uploaded"
                             />
-                            <p>Uploaded at: {new Date(photo.uploadedAt).toLocaleString()}</p>
+                            <p className="text-sm text-gray-500 mt-2">
+                                Uploaded at: {new Date(photo.uploadedAt).toLocaleString()}
+                            </p>
                         </li>
                     ))
                 ) : (
-                    <p>No photos uploaded yet.</p>
+                    <p className="text-gray-600">No photos uploaded yet.</p>
                 )}
             </ul>
-            <form onSubmit={handleUpload}>
-                <input type="file" onChange={handleFileChange} />
-                <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded">Upload Photo</button>
+
+            <form onSubmit={handleUpload} className="mt-6">
+                <div className="mb-4">
+                    <label className="block text-gray-700 font-semibold mb-2" htmlFor="fileUpload">
+                        Upload a Photo
+                    </label>
+                    <input
+                        id="fileUpload"
+                        type="file"
+                        onChange={handleFileChange}
+                        className="block w-full text-sm text-gray-600 bg-gray-50 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                </div>
+
+                <button 
+                    type="submit" 
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded shadow-md">
+                    Upload Photo
+                </button>
             </form>
         </div>
+        
+        </>
     );
 };
 

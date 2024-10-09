@@ -5,6 +5,7 @@ import Home from './components/Home';
 import Myfiles from './components/Myfiles';
 import { Aboutus } from './components/Aboutus';
 import FolderPage from './components/Folder'
+import BlogPage from './components/Blog'
 
 function App() {
 
@@ -17,6 +18,7 @@ function App() {
               <Route path='/myfiles' element={<Myfiles/>}/>
               <Route path='/aboutus' element={<Aboutus/>}/>
               <Route path="/folder/:folderId" element={<FolderPage />}/>
+              <Route path="/folders/:folderId/blog" element={<BlogPage />} />
             </Routes>
           </Router>
 
